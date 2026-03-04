@@ -14,11 +14,18 @@ __pycache__/
 *.model
 *.onnx
 faiss_index/
-# If you want to keep your JSON/CSV data, leave them unignored.
+data/vector_store/
+
+# HuggingFace model cache (can be large)
+*.safetensors
+models/
 
 # OS files
 .DS_Store
 Thumbs.db
 
-# Environment variables
+# Environment variables — NEVER commit this
 .env
+
+# Logs (optional — may want to track)
+logs/
