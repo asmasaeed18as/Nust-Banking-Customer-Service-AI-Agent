@@ -1,0 +1,51 @@
+# ============================================================
+# NUST Banking Customer Service AI Agent - Requirements
+# ============================================================
+
+# ── Data Ingestion & Preprocessing ──────────────────────────
+pandas==2.2.2
+openpyxl==3.1.2
+python-docx==1.1.2
+PyMuPDF==1.24.3            # fitz: PDF parsing
+nltk==3.8.1
+regex==2024.4.28
+python-dotenv==1.0.1
+
+# ── Deep Learning & LLM ─────────────────────────────────────
+torch==2.3.0                # Install CPU or CUDA version as per your setup
+transformers==4.41.2
+accelerate==0.30.0
+huggingface-hub==0.23.2
+sentencepiece==0.2.0        # Required for some tokenizers (Qwen, LLaMA)
+protobuf==4.25.3
+
+# ── Fine-Tuning (LoRA / QLoRA) ───────────────────────────────
+peft==0.11.1
+bitsandbytes==0.43.1        # 4-bit quantization (Windows: use bitsandbytes-windows)
+datasets==2.19.1
+
+# ── Embeddings & Vector Store ───────────────────────────────
+sentence-transformers==2.7.0
+faiss-cpu==1.8.0            # Use faiss-gpu if CUDA available
+
+# ── RAG Orchestration ────────────────────────────────────────
+langchain==0.2.1
+langchain-community==0.2.1
+langchain-huggingface==0.0.3
+tiktoken==0.7.0             # Token counting for chunk size management
+
+# ── Backend API ─────────────────────────────────────────────
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9     # File upload support
+pydantic==2.7.1
+
+# ── Caching ──────────────────────────────────────────────────
+cachetools==5.3.3
+
+# ── Logging & Debugging ──────────────────────────────────────
+loguru==0.7.2
+rich==13.7.1                # Beautiful terminal output for debugging
+
+# ── Guardrails ───────────────────────────────────────────────
+better-profanity==0.7.0

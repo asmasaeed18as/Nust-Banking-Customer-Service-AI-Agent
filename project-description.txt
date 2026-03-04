@@ -1,0 +1,392 @@
+CS416: Large Language Models  
+Class: BESE-13  
+Project Details  
+Date: 4th Feb 2026   
+Instructor: Prof. Dr. Faisal Shafait 
+Dr. Momina Moetesum  
+CLO 3: Apply transfer learning and prompt engineering to 
+solve various problems using large language 
+CLO 5: Collaboratively design the pipeline and fine-tune 
+large language models for various NLP tasks 
+CLO 6: Develop proficiency and confidence in modern LLM 
+tools usage   
+Introduction  
+In this project, you will design a Large Language Model (LLM)-based solution to enhance 
+customer service for a local bank. The goal is to convert a curated set of anonymized customer 
+interaction documents into a responsive AI-driven assistant capable of accurately handling 
+customer inquiries, generating coherent and context-aware responses, and maintaining a high 
+standard of data privacy and trust.  
+Dataset Description  
+You will be provided with a dataset from a fictional bank. Your responsibility includes parsing 
+and preprocessing the dataset, which may be in formats such as JSON, CSV, or plain text. 
+Dataset is available on LMS.  
+Languages and Tools  
+You are free to use any languages and frameworks as you desire. You are encouraged to use this 
+opportunity to learn new tools and technologies. This project provides you with a unique 
+opportunity to learn the interactions between different tools.  
+Project Requirements  
+The requirements of the project are described below. Your system must contain the following 
+features:  
+1. Data Ingestion & Preprocessing: Read and sanitize all documents from the local bank’s 
+dataset. Implement anonymization steps if they are not already performed. Handle 
+tokenization, lowercasing, or other text-cleaning tasks to prepare data for LLM workflows.  
+2. Large Language Model Selection: You may use any open-source model such as Llama, T5, 
+DeepSeek or a similar transformer-based architecture. Use of commercial models such 
+ChatGPT is not allowed. Ensure the chosen LLM can handle your dataset effectively and can 
+be integrated with your system for fine-tuning or prompt engineering. You will also justify 
+why you choose the model.  
+Note that the scope of this project is limited to models with 6 billion parameters. Please select 
+models accordingly.  
+3. Embedding & Indexing: Create an embedding-based index. Store vector embeddings for 
+each document (or chunk of text) so relevant content can be retrieved swiftly.   
+4. Model Fine-Tuning & Inference: Fine-tune your chosen LLM on the local bank data to 
+improve domain-specific language understanding. For queries, retrieve relevant document 
+segments using the embedding index, then have the model generate or synthesize an answer.   
+2 
+5. Prompt Engineering: Tailor your LLM to simulate helpful, caring interactions typical of 
+customer service chats. The model should give domain specific answers and should 
+gracefully handle out-ofdomain questions. 
+6. Real-Time Updates: Allow for new documents (e.g., fresh FAQ entries or updated bank 
+policies) to be seamlessly added and indexed. Any new information should instantly become 
+available to customers seeking the latest updates. Let’s say a user adds a new document into 
+the system (following the dataset format), he or she shall be able to ask any question and 
+LLM should be able to generate the response based on new added document. You can also 
+provide a User Interface to add new data/articles/documents/items etc.  
+7. Performance and Reliability: Aim for minimal lag when dealing with multi-word or 
+complex queries which is important for delivering a smooth customer experience. 
+Demonstrate that your solution can scale effectively to large datasets without compromising 
+service quality.  
+8. Using GIT for team collaboration: You should not complete the project and then upload it 
+once on bitbucket or github. Instead, you should keep pushing the updates as commits as you 
+progress through the project. All group members should make commits of their contributions. 
+You can register to make a private repository on Github.  
+9. System Interface: Develop a clear and welcoming user interface where customers can 
+submit questions, view responses, and upload additional information (documents). Keep the 
+design simple but reassuring, so users know they’re interacting with a reliable support tool.  
+10. Application of Guard Rails: Implement content filtering and policy enforcement so the 
+LLM does not share sensitive or disallowed information. Include a mechanism to manage 
+potentially harmful or off-topic requests (e.g., refusing to provide disallowed details or 
+redirecting the user). Proactively  
+detect and mitigate “jailbreaking” or “prompt injection” attempts, in which users try to 
+manipulate the model to bypass restrictions or reveal confidential data. 
+3 
+  
+ 
+ 4 
+Grading Criteria & Rubric:  
+The maximum score you can get is 20. Grading criteria is described in the table below. Marks 
+will be given to each group member based on their contribution and performance in the viva.   
+ 
+Criterion Description Marks CLO Performance Levels 
+Data 
+Preprocessing 
+Handling sensitive 
+banking data, 
+anonymization, and 
+preprocessing for 
+LLM pipelines. 
+2 CLO
+5 
+Excellent (2): Full anonymization and 
+clean, reusable data pipeline. Satisfactory 
+(1): Minor issues with cleaning or 
+anonymization. Poor (0): Unsafe or 
+inconsistent handling of data / PII. 
+Vector 
+Embeddings & 
+Retrieval 
+Building embedding 
+index and achieving 
+accurate retrieval for 
+complex user 
+queries. 
+3 CLO
+5 
+Excellent (3): Highly relevant retrieval 
+across diverse queries; well-tuned search. 
+Good (2): Mostly relevant results with 
+occasional mismatches. Satisfactory (1): 
+Mixed relevance; noisy retrieval. Poor (0): 
+Retrieval rarely returns useful information. 
+Prompt 
+Engineering 
+Designing robust 
+prompts for domain
+specific queries and 
+out-of-domain 
+handling. 
+2 CLO
+3 
+Excellent (2): Stable, safe, domain-correct 
+responses; clear refusals for unsupported 
+queries. Satisfactory (1): Reasonable 
+responses but some hallucinations or weak 
+out-of-domain handling. Poor (0): Frequent 
+unsafe, irrelevant, or confusing answers. 
+Guard Rails & 
+Safety 
+Jailbreak resistance, 
+hallucination 
+mitigation, and 
+ethical AI behaviour. 
+3 CLO
+3 
+Excellent (3): Strong guard rails; effective 
+defence against adversarial prompts; 
+minimal unsafe content. Good (2): Mostly 
+effective guard rails; a few bypasses. 
+Satisfactory (1): Basic checks only; several 
+unsafe cases slip through. Poor (0): System 
+easily jailbreaks or leaks sensitive 
+information. 
+Response 
+Quality & 
+Latency 
+Clarity, correctness, 
+usefulness, and 
+responsiveness of 
+system outputs. 
+2 CLO
+3 
+Excellent (2): Clear, accurate, and context
+aware responses with low latency. 
+Satisfactory (1): Generally understandable 
+responses; noticeable but acceptable delay. 
+Poor (0): Responses are slow and/or 
+frequently incorrect or confusing. 
+Real-Time 
+Updates / New 
+Documents 
+Ability to ingest new 
+bank documents / 
+FAQs and update the 
+system in a timely 
+manner. 
+2 CLO
+5 
+Excellent (2): New documents are ingested 
+and become searchable with minimal 
+manual effort. Satisfactory (1): Updates 
+are possible but require several manual 
+steps. Poor (0): No functioning mechanism 
+for updating knowledge. 
+  
+ 
+ 5 
+Criterion Description Marks CLO Performance Levels 
+Code Quality & 
+Documentation 
+Code structure, 
+readability, 
+commenting, and 
+overall 
+documentation. 
+2 CLO
+6 
+Excellent (2): Clean, modular, well
+documented code and clear README / 
+setup instructions. Satisfactory (1): Code 
+works but has limited structure or 
+documentation. Poor (0): Hard-to-follow 
+code with minimal or no documentation. 
+System Interface 
+(UI/UX) 
+Usability and clarity 
+of the customer
+facing interface. 
+1 CLO
+6 
+Excellent (1): Intuitive, clean UI that 
+supports the complete workflow. Poor (0): 
+Confusing, incomplete, or missing 
+interface. 
+Use of Git for 
+Collaboration 
+Evidence of 
+collaborative use of 
+Git or equivalent 
+version control. 
+3 CLO
+6 
+Excellent (3): Regular commits from 
+multiple members, meaningful messages, 
+and use of branches/merges. Good (2): 
+Consistent commits with minor issues in 
+messages/branching. Satisfactory (1): 
+Some commits but limited history or weak 
+commit hygiene. Poor (0): Single bulk 
+upload or no real collaboration evidence. 
+  
+CLO Description Total 
+CLO-3 Apply transfer learning and prompt engineering to solve various problems 
+using large language 7 
+CLO-5 Collaboratively design the pipeline and fine-tune large language models for 
+various NLP tasks 7 
+CLO-6 Develop proficiency and confidence in modern LLM tools usage 6 
+Overall Total  20 
+  
+  
+Timeline:  
+The project has three deliverables, as mentioned below:  
+1- Project Proposal  
+A short document that includes:  
+• List of group members.  
+• Languages and frameworks to be used.  
+Deadline: 11th February 2026 
+2- LLM Implementation  
+Here you must submit your code for implementing LLM. Provide a prototype system that returns 
+initial, LLM-driven answers. You will also submit Architecture Diagram.  
+Deadline: 8th March 2026 
+Note: This submission will be evaluated as a Lab Project  
+3- Complete Submission  
+Final code covering ingestion, embeddings, model integration, guard rails, and user interface. 
+Documentation detailing architecture, usage instructions, references  
+Deadline: 5th April 2026 
+Note: This Submission will be evaluated as Course Project 
+4- Presentation, Demo and Viva  
+Date: 8th April 2026 
+Note: Presentation and Demo will be evaluated as part of Course Project and Viva will be 
+evaluated as Lab Final  
+Project Discussion:  
+If you have any questions about the project specification or would like suggestions on tools and 
+frameworks you can use for your implementation, you may email 
+aabid.msai23seecs@seecs.edu.pk. Please note that you are expected to understand the algorithms 
+and debug your code independently. 
+Plagiarism Policy:  
+Plagiarism in any form will not be tolerated. You must complete the project on your own and 
+provide credit where the credit is due. You will be graded based on what you implemented by 
+yourself. If any form of plagiarism is detected, you will be assigned a grade of zero in your 
+project.  
+6 
+  
+ 
+ 7 
+Range of Complex Problem Solving:  
+  Attribute  Complex Problems  
+  
+1  
+  
+Preamble  
+This project cannot be resolved without an in-depth 
+engineering knowledge.  
+  
+  
+2  
+  
+  
+Depth of analysis required  
+The student will conduct a Data Quality Assessment to 
+evaluate whether the documents are complete, clean, and 
+contextually relevant. Additionally, the student will analyze 
+and determine an appropriate chunking strategy, deciding 
+whether to split the text semantically or based on token 
+limits.  
+  
+  
+  
+3  
+  
+  
+  
+Depth of knowledge required  
+Extensive knowledge will be needed regarding the inner 
+working of large language models and the trade-offs 
+associated therein. It would be necessary to refer to 
+research papers to figure out the optimal approach to 
+solving these problems.  
+  
+4  
+  
+Extent of applicable codes  
+Standard coding style guides are applicable depending on 
+the languages/frameworks that are used for development.  
+  
+  
+  
+  
+5  
+  
+  
+  
+Interdependence  
+The project will require students to develop many different 
+components that rely on the output of other components. 
+For example: This project consists of several interlinked 
+components (e.g., data ingestion, embedding generation, 
+query handling). Each module relies on the outputs of 
+previous steps, and only by integrating these parts 
+effectively can student deliver a cohesive and functional 
+solution.  
+  
+ 
+ 
+  
+ 
+ 8 
+Range of Complex Engineering Activities:  
+  
+  Attribute  Complex Activities  
+  
+1  
+  
+Preamble  The project will require the students to complete the 
+following complex activities:  
+  
+  
+2  
+  
+  
+Range of resources  
+This project will require the use of several libraries for 
+different tasks like model implementation , prompt 
+engineering, guard rails and User Interface etc.  
+Similarly it will require expert human resources in the 
+aforementioned tasks.  
+  
+  
+  
+3  
+  
+  
+  
+Level of interaction  
+This project will have several components which will 
+require interaction with each other. High level of 
+interaction brings with it a lot of issues which will have 
+to be solved. Majority of the new components will rely 
+heavily on the output produced from the previous 
+component to further process the data.  
+  
+  
+  
+4  
+  
+  
+  
+Innovation  
+An approach has to be developed for searching such that 
+the performance does not deteriorate significantly on 
+increasing the dataset size or the query length. This may 
+require coming up with techniques and learning tools not 
+previously encountered by the students.  
+  
+  
+  
+  
+  
+5  
+  
+  
+  
+  
+  
+Familiarity  
+Students must leverage their existing knowledge of data 
+structures and algorithms—originally applied to tasks 
+like basic document searches—and adapt it for LLM
+based retrieval and ranking. Rather than simply returning 
+relevant items, the focus now is on generating high
+quality, context-aware responses, requiring students to 
+extend their familiarity into new areas such as 
+embedding, semantic ranking, and prompt engineering.  
+ 
