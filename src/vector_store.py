@@ -22,7 +22,7 @@ class NustBankIndexer:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info(f"Using device: {self.device}")
         
-        self.model = SentenceTransformer(model_name, device=self.device)
+        self.model = SentenceTransformer(model_name, device=self.device, trust_remote_code=True)
         self.index = None
         self.metadata = []
 

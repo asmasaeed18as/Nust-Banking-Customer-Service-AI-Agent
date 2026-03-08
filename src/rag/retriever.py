@@ -37,7 +37,7 @@ class NustBankRetriever:
 
         # ── Load embedding model ──────────────────────────────────────────────
         logger.debug(f"[Retriever] Loading embedding model: {EMBEDDING_MODEL}")
-        self.embedder = SentenceTransformer(EMBEDDING_MODEL)
+        self.embedder = SentenceTransformer(EMBEDDING_MODEL, trust_remote_code=True)
         logger.success("[Retriever] Embedding model loaded.")
 
         # ── Load FAISS index ──────────────────────────────────────────────────
@@ -57,6 +57,11 @@ class NustBankRetriever:
     def retrieve(self, query: str, top_k: int = TOP_K_RESULTS) -> List[Dict]:
         """
         Embed `query`, search FAISS, and return enriched chunk dictionaries.
+
+        Applies a two-pass threshold:
+          Pass 1 — MIN_SCORE_THRESHOLD (strict): preferred results
+          Pass 2 — FALLBACK_THRESHOLD (soft): if pass 1 returns nothing,
+                   retry rather than immediately returning empty
 
         Each returned dict contains:
           - question  : the matched document question
@@ -88,35 +93,45 @@ class NustBankRetriever:
         search_ms = (time.perf_counter() - t1) * 1000
         logger.debug(f"[Retriever] FAISS search done in {search_ms:.2f} ms")
 
-        # ── Build results ─────────────────────────────────────────────────────
-        results = []
-        for rank, (idx, dist) in enumerate(zip(indices[0], distances[0])):
-            # Convert L2 distance → cosine similarity (since vecs are normalised)
-            score = round(float(1 - dist / 2), 4)
-            chunk = self.metadata[idx]
+        # ── Build results with threshold fallback ─────────────────────────────
+        FALLBACK_THRESHOLD = 0.20   # softer threshold for second pass
 
-            if score < MIN_SCORE_THRESHOLD:
+        for threshold in (MIN_SCORE_THRESHOLD, FALLBACK_THRESHOLD):
+            results = []
+            for rank, (idx, dist) in enumerate(zip(indices[0], distances[0])):
+                score = round(float(1 - dist / 2), 4)
+                chunk = self.metadata[idx]
+
+                if score < threshold:
+                    logger.debug(
+                        f"[Retriever] Rank {rank+1} dropped — score {score:.3f} "
+                        f"below threshold {threshold}"
+                    )
+                    continue
+
+                result = {
+                    "rank"    : rank + 1,
+                    "score"   : score,
+                    "question": chunk.get("question", ""),
+                    "answer"  : chunk.get("answer", ""),
+                    "source"  : chunk.get("source", "Unknown"),
+                    "category": chunk.get("category", "General"),
+                }
+                results.append(result)
+
                 logger.debug(
-                    f"[Retriever] Rank {rank+1} dropped — score {score:.3f} "
-                    f"below threshold {MIN_SCORE_THRESHOLD}"
+                    f"[Retriever] Rank {rank+1} | Score: {score:.3f} | "
+                    f"Src: {chunk.get('source','?')} | "
+                    f"Q: {chunk.get('question','')[:60]}..."
                 )
-                continue
 
-            result = {
-                "rank"    : rank + 1,
-                "score"   : score,
-                "question": chunk.get("question", ""),
-                "answer"  : chunk.get("answer", ""),
-                "source"  : chunk.get("source", "Unknown"),
-                "category": chunk.get("category", "General"),
-            }
-            results.append(result)
-
-            logger.debug(
-                f"[Retriever] Rank {rank+1} | Score: {score:.3f} | "
-                f"Src: {chunk.get('source','?')} | "
-                f"Q: {chunk.get('question','')[:60]}..."
-            )
+            if results:
+                if threshold == FALLBACK_THRESHOLD and threshold < MIN_SCORE_THRESHOLD:
+                    logger.warning(
+                        f"[Retriever] Used fallback threshold {threshold} — "
+                        f"no chunks passed strict threshold {MIN_SCORE_THRESHOLD}"
+                    )
+                break  # got results, stop
 
         total_ms = (time.perf_counter() - t0) * 1000
         logger.info(

@@ -22,7 +22,7 @@ EMBEDDING_MODEL     = "Alibaba-NLP/gte-large-en-v1.5"  # 1024-dim, MTEB 65.4, En
 EMBEDDING_DIMENSION = 1024
 
 # ── Retrieval (RAG) ───────────────────────────────────────────────────────────
-TOP_K_RESULTS       = 3       # Number of FAISS chunks returned per query
+TOP_K_RESULTS       = 5       # Number of FAISS chunks returned per query
 MIN_SCORE_THRESHOLD = 0.35    # Raised from 0.30 — gte-large scores are tighter/higher
 
 # ── LLM Configuration ─────────────────────────────────────────────────────────
