@@ -9,9 +9,11 @@ Full flow for every query:
   │         ↓                              │
   │  [GuardRail.check_input]               │  ← block jailbreaks / off-topic
   │         ↓                              │
+  │  [History augmentation]                │  ← prepend last N turns to query
+  │         ↓                              │
   │  [Retriever.retrieve]                  │  ← FAISS top-k search
   │         ↓                              │
-  │  [PromptBuilder.build_prompt]          │  ← format context + question
+  │  [PromptBuilder.build_prompt]          │  ← format context + history + question
   │         ↓                              │
   │  [LLMHandler.generate]                 │  ← call Qwen / local model
   │         ↓                              │
@@ -35,11 +37,18 @@ from src.rag.llm_handler import LLMHandler
 from src.guardrails.guard import GuardRail
 from config.settings import TOP_K_RESULTS
 
+# ── Conversation memory settings ──────────────────────────────────────────────
+MAX_HISTORY_TURNS  = 4    # number of past (user, bot) pairs to remember
+MAX_SESSIONS       = 500  # cap to avoid unbounded memory growth
+
 
 class NustBankRAGPipeline:
     """
     Single entry-point for the entire RAG pipeline.
-    Initialise once, call `answer(query)` repeatedly.
+    Initialise once, call `answer(query, session_id)` repeatedly.
+
+    Conversation history is stored per session_id so that multiple
+    browser tabs / users each maintain independent context.
     """
 
     def __init__(self):
@@ -52,9 +61,40 @@ class NustBankRAGPipeline:
         self.llm       = LLMHandler()
         self.guard     = GuardRail()
 
+        # session_id → list of {"query": str, "answer": str}
+        self.sessions: Dict[str, List[Dict]] = {}
+
         logger.success("[Pipeline] All components ready. Pipeline is live.")
 
-    def answer(self, query: str) -> Dict:
+    # ── Session helpers ───────────────────────────────────────────────────────
+
+    def _get_history(self, session_id: str) -> List[Dict]:
+        return self.sessions.get(session_id, [])
+
+    def _save_turn(self, session_id: str, query: str, answer: str):
+        if session_id not in self.sessions:
+            # Evict oldest session if cap reached
+            if len(self.sessions) >= MAX_SESSIONS:
+                oldest = next(iter(self.sessions))
+                del self.sessions[oldest]
+                logger.debug(f"[Pipeline] Evicted oldest session: {oldest}")
+            self.sessions[session_id] = []
+
+        self.sessions[session_id].append({"query": query, "answer": answer})
+
+        # Keep only latest N turns
+        if len(self.sessions[session_id]) > MAX_HISTORY_TURNS:
+            self.sessions[session_id] = self.sessions[session_id][-MAX_HISTORY_TURNS:]
+
+    def clear_session(self, session_id: str):
+        """Wipe conversation history for a given session (called on Clear Chat)."""
+        if session_id in self.sessions:
+            del self.sessions[session_id]
+            logger.info(f"[Pipeline] Session cleared: {session_id}")
+
+    # ── Main answer method ────────────────────────────────────────────────────
+
+    def answer(self, query: str, session_id: str = "default", user_context: dict = None) -> Dict:
         """
         End-to-end pipeline: query → guardrail → retrieval → prompt → LLM → response.
 
@@ -69,7 +109,10 @@ class NustBankRAGPipeline:
         }
         """
         total_start = time.perf_counter()
+        history = self._get_history(session_id)
+
         logger.info(f"[Pipeline] ── NEW QUERY ──────────────────────────────")
+        logger.info(f"[Pipeline] Session: '{session_id}' | History turns: {len(history)} | Profile: {'yes' if user_context else 'no'}")
         logger.info(f"[Pipeline] Query received: '{query}'")
 
         # ── Step 1: Input Guardrail ───────────────────────────────────────────
@@ -85,8 +128,20 @@ class NustBankRAGPipeline:
                 "latency_ms"  : round((time.perf_counter() - total_start) * 1000, 1),
             }
 
-        # ── Step 2: Retrieval ─────────────────────────────────────────────────
-        chunks = self.retriever.retrieve(query, top_k=TOP_K_RESULTS)
+        # ── Step 2: Augment query with history for better retrieval ───────────
+        # Prepend the last 2 turns so vague queries like "what are its rates?"
+        # resolve correctly against the embedding index.
+        augmented_query = query
+        if history:
+            recent = history[-2:]   # last 2 turns is sufficient for retrieval
+            history_context = " ".join(
+                f"{h['query']} {h['answer'][:100]}" for h in recent
+            )
+            augmented_query = f"{history_context} {query}"
+            logger.debug(f"[Pipeline] Augmented query for retrieval: '{augmented_query[:120]}...'")
+
+        # ── Step 3: Retrieval ─────────────────────────────────────────────────
+        chunks = self.retriever.retrieve(augmented_query, top_k=TOP_K_RESULTS)
         logger.info(f"[Pipeline] Retrieved {len(chunks)} relevant chunks.")
         for c in chunks:
             logger.debug(
@@ -94,18 +149,21 @@ class NustBankRAGPipeline:
                 f"{c['source']} | Q: {c['question'][:55]}..."
             )
 
-        # ── Step 3: Prompt Construction ───────────────────────────────────────
-        prompt = build_prompt(query, chunks)
+        # ── Step 4: Prompt Construction (with history injected) ───────────────
+        prompt = build_prompt(query, chunks, history=history, user_context=user_context)
         logger.info(f"[Pipeline] Prompt built. Context used: {prompt['context_used']}")
 
-        # ── Step 4: LLM Generation ────────────────────────────────────────────
+        # ── Step 5: LLM Generation ────────────────────────────────────────────
         raw_answer = self.llm.generate(
             system=prompt["system"],
             user=prompt["user"]
         )
 
-        # ── Step 5: Output Guardrail ──────────────────────────────────────────
+        # ── Step 6: Output Guardrail ──────────────────────────────────────────
         clean_answer = self.guard.check_output(raw_answer)
+
+        # ── Step 7: Save turn to history ──────────────────────────────────────
+        self._save_turn(session_id, query, clean_answer)
 
         total_ms = round((time.perf_counter() - total_start) * 1000, 1)
         logger.success(f"[Pipeline] Query answered in {total_ms} ms.")
