@@ -1,4 +1,9 @@
 import React, { useState, useRef, useCallback } from 'react'
+import {
+  Landmark, User, Users, MessageSquare, Upload, Trash2,
+  Copy, Check, ShieldX, AlertTriangle, FileText, FolderOpen,
+  ArrowUp, CheckCircle,
+} from 'lucide-react'
 
 const API = 'http://localhost:8000/api'
 
@@ -14,7 +19,7 @@ function formatTime(date) {
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
 }
 
-/* ─── Simple Markdown Renderer ────────────────────────────────────────────── */
+/* ─── Simple Markdown Renderer ─────────────────────────────────────────────── */
 function renderMarkdown(text) {
   if (!text) return []
   const lines = text.split('\n')
@@ -23,27 +28,23 @@ function renderMarkdown(text) {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
-
-    // Numbered list
     if (/^\d+\.\s/.test(line)) {
-      elements.push(<div key={key++} className="md-list-item numbered">
-        <span className="md-num">{line.match(/^(\d+\.)/)[1]}</span>
-        <span dangerouslySetInnerHTML={{ __html: inlineFormat(line.replace(/^\d+\.\s/, '')) }} />
-      </div>)
-    }
-    // Bullet list
-    else if (/^[-•·o]\s/.test(line)) {
-      elements.push(<div key={key++} className="md-list-item">
-        <span className="md-bullet">•</span>
-        <span dangerouslySetInnerHTML={{ __html: inlineFormat(line.replace(/^[-•·o]\s/, '')) }} />
-      </div>)
-    }
-    // Empty line → spacing
-    else if (line.trim() === '') {
+      elements.push(
+        <div key={key++} className="md-list-item numbered">
+          <span className="md-num">{line.match(/^(\d+\.)/)[1]}</span>
+          <span dangerouslySetInnerHTML={{ __html: inlineFormat(line.replace(/^\d+\.\s/, '')) }} />
+        </div>
+      )
+    } else if (/^[-•·o]\s/.test(line)) {
+      elements.push(
+        <div key={key++} className="md-list-item">
+          <span className="md-bullet">•</span>
+          <span dangerouslySetInnerHTML={{ __html: inlineFormat(line.replace(/^[-•·o]\s/, '')) }} />
+        </div>
+      )
+    } else if (line.trim() === '') {
       elements.push(<div key={key++} className="md-spacer" />)
-    }
-    // Normal text
-    else {
+    } else {
       elements.push(<p key={key++} dangerouslySetInnerHTML={{ __html: inlineFormat(line) }} />)
     }
   }
@@ -57,7 +58,7 @@ function inlineFormat(text) {
     .replace(/`(.+?)`/g, '<code>$1</code>')
 }
 
-/* ─── Message Bubble ───────────────────────────────────────────────────────── */
+/* ─── Message Bubble ────────────────────────────────────────────────────────── */
 function MessageBubble({ msg }) {
   const isUser = msg.role === 'user'
   const isBlocked = msg.blocked
@@ -72,10 +73,10 @@ function MessageBubble({ msg }) {
 
   return (
     <div className={`message-row ${isUser ? 'user' : ''}`}>
-      {!isUser && <div className="avatar bot">🏦</div>}
+      {!isUser && <div className="avatar bot"><Landmark size={15} /></div>}
       <div className="bubble-wrap">
         <div className={`bubble ${isUser ? 'user' : 'bot'} ${isBlocked ? 'blocked' : ''}`}>
-          {isBlocked && <span>⛔ </span>}
+          {isBlocked && <ShieldX size={14} className="inline-icon" />}
           {isUser
             ? msg.content
             : <div className="md-body">{renderMarkdown(msg.content)}</div>
@@ -86,7 +87,8 @@ function MessageBubble({ msg }) {
           <div className="sources-bar">
             {msg.sources.slice(0, 3).map((s, i) => (
               <span key={i} className="source-tag">
-                📄 {s.source.replace('Excel - ', '').replace('JSON FAQ', 'App FAQ')}
+                <FileText size={11} />
+                {s.source.replace('Excel - ', '').replace('JSON FAQ', 'App FAQ')}
                 <span className="source-score">{(s.score * 100).toFixed(0)}%</span>
               </span>
             ))}
@@ -100,21 +102,21 @@ function MessageBubble({ msg }) {
           )}
           {!isUser && (
             <button className="copy-btn" onClick={copyText} title="Copy response">
-              {copied ? '✅' : '📋'}
+              {copied ? <Check size={11} /> : <Copy size={11} />}
             </button>
           )}
         </div>
       </div>
-      {isUser && <div className="avatar user">👤</div>}
+      {isUser && <div className="avatar user"><User size={15} /></div>}
     </div>
   )
 }
 
-/* ─── Typing Indicator ─────────────────────────────────────────────────────── */
+/* ─── Typing Indicator ──────────────────────────────────────────────────────── */
 function TypingIndicator() {
   return (
     <div className="message-row">
-      <div className="avatar bot">🏦</div>
+      <div className="avatar bot"><Landmark size={15} /></div>
       <div className="bubble bot" style={{ padding: '14px 18px' }}>
         <div className="typing-indicator">
           <span /><span /><span />
@@ -124,9 +126,9 @@ function TypingIndicator() {
   )
 }
 
-/* ─── Upload Panel ─────────────────────────────────────────────────────────── */
+/* ─── Upload Panel ──────────────────────────────────────────────────────────── */
 function UploadPanel() {
-  const [status, setStatus] = useState(null)  // null | 'ok' | 'error'
+  const [status, setStatus] = useState(null)
   const [msg, setMsg] = useState('')
   const [dragging, setDragging] = useState(false)
   const fileRef = useRef()
@@ -140,11 +142,11 @@ function UploadPanel() {
     try {
       const res = await fetch(`${API}/upload`, { method: 'POST', body: fd })
       const data = await res.json()
-      if (res.ok) { setStatus('ok'); setMsg(`✅ ${data.message}`) }
-      else { setStatus('error'); setMsg(`❌ ${data.detail}`) }
-    } catch (e) {
+      if (res.ok) { setStatus('ok'); setMsg(`Ingested: ${data.message}`) }
+      else { setStatus('error'); setMsg(`Failed: ${data.detail}`) }
+    } catch {
       setStatus('error')
-      setMsg('❌ Could not connect to backend.')
+      setMsg('Could not connect to backend.')
     }
   }
 
@@ -162,7 +164,7 @@ function UploadPanel() {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
       >
-        <div className="upload-icon">📂</div>
+        <div className="upload-icon"><FolderOpen size={44} strokeWidth={1.3} /></div>
         <h3>Upload Bank Document</h3>
         <p>Add new FAQs, policies, or product information.<br />The AI will learn from it instantly.</p>
         <div className="upload-formats">
@@ -183,14 +185,14 @@ function UploadPanel() {
   )
 }
 
-/* ─── User Profile Panel ─────────────────────────────────────────────── */
+/* ─── User Profile Panel ────────────────────────────────────────────────────── */
 const EXISTING_PRODUCTS = [
   'Savings Account', 'Current Account', 'Term Deposit',
-  'Debit Card', 'Credit Card', 'Personal Finance', 'Home Finance', 'Auto Finance'
+  'Debit Card', 'Credit Card', 'Personal Finance', 'Home Finance', 'Auto Finance',
 ]
 const INTEREST_OPTIONS = [
   'Account Opening', 'Loans & Finance', 'Cards',
-  'Transfers & Payments', 'Investments', 'Mobile Banking', 'Remittances'
+  'Transfers & Payments', 'Investments', 'Mobile Banking', 'Remittances',
 ]
 
 function ProfilePanel({ profile, setProfile }) {
@@ -205,7 +207,7 @@ function ProfilePanel({ profile, setProfile }) {
   return (
     <div className="profile-panel">
       <div className="profile-header">
-        <div className="profile-icon">👤</div>
+        <div className="profile-icon"><User size={24} /></div>
         <div>
           <h2>Your Profile</h2>
           <p>Optional — helps the AI give more relevant answers.</p>
@@ -213,18 +215,17 @@ function ProfilePanel({ profile, setProfile }) {
       </div>
 
       {hasData && (
-        <div className="profile-active-badge">✅ Profile active — AI will use your context</div>
+        <div className="profile-active-badge">
+          <CheckCircle size={14} />
+          Profile active — AI will use your context
+        </div>
       )}
 
       <div className="profile-form">
-
         <div className="profile-section">
           <label className="profile-label">Customer Type</label>
-          <select
-            className="profile-select"
-            value={profile.customerType}
-            onChange={e => setProfile(p => ({ ...p, customerType: e.target.value }))}
-          >
+          <select className="profile-select" value={profile.customerType}
+            onChange={e => setProfile(p => ({ ...p, customerType: e.target.value }))}>
             <option value="">Not specified</option>
             <option>Individual</option>
             <option>Business</option>
@@ -235,11 +236,8 @@ function ProfilePanel({ profile, setProfile }) {
 
         <div className="profile-section">
           <label className="profile-label">Employment Status</label>
-          <select
-            className="profile-select"
-            value={profile.employment}
-            onChange={e => setProfile(p => ({ ...p, employment: e.target.value }))}
-          >
+          <select className="profile-select" value={profile.employment}
+            onChange={e => setProfile(p => ({ ...p, employment: e.target.value }))}>
             <option value="">Not specified</option>
             <option>Salaried</option>
             <option>Self-Employed</option>
@@ -251,11 +249,8 @@ function ProfilePanel({ profile, setProfile }) {
 
         <div className="profile-section">
           <label className="profile-label">Age Group</label>
-          <select
-            className="profile-select"
-            value={profile.ageGroup}
-            onChange={e => setProfile(p => ({ ...p, ageGroup: e.target.value }))}
-          >
+          <select className="profile-select" value={profile.ageGroup}
+            onChange={e => setProfile(p => ({ ...p, ageGroup: e.target.value }))}>
             <option value="">Not specified</option>
             <option>Under 25</option>
             <option>25–40</option>
@@ -265,15 +260,15 @@ function ProfilePanel({ profile, setProfile }) {
         </div>
 
         <div className="profile-section">
-          <label className="profile-label">Existing Products <span className="profile-hint">(select all that apply)</span></label>
+          <label className="profile-label">Existing Products
+            <span className="profile-hint"> (select all that apply)</span>
+          </label>
           <div className="profile-checks">
             {EXISTING_PRODUCTS.map(p => (
               <label key={p} className="check-item">
-                <input
-                  type="checkbox"
+                <input type="checkbox"
                   checked={profile.existingProducts.includes(p)}
-                  onChange={() => toggle('existingProducts', p)}
-                />
+                  onChange={() => toggle('existingProducts', p)} />
                 {p}
               </label>
             ))}
@@ -281,15 +276,15 @@ function ProfilePanel({ profile, setProfile }) {
         </div>
 
         <div className="profile-section">
-          <label className="profile-label">Areas of Interest <span className="profile-hint">(select all that apply)</span></label>
+          <label className="profile-label">Areas of Interest
+            <span className="profile-hint"> (select all that apply)</span>
+          </label>
           <div className="profile-checks">
             {INTEREST_OPTIONS.map(p => (
               <label key={p} className="check-item">
-                <input
-                  type="checkbox"
+                <input type="checkbox"
                   checked={profile.interests.includes(p)}
-                  onChange={() => toggle('interests', p)}
-                />
+                  onChange={() => toggle('interests', p)} />
                 {p}
               </label>
             ))}
@@ -297,10 +292,11 @@ function ProfilePanel({ profile, setProfile }) {
         </div>
 
         {hasData && (
-          <button
-            className="profile-clear-btn"
-            onClick={() => setProfile({ customerType: '', employment: '', ageGroup: '', existingProducts: [], interests: [] })}
-          >
+          <button className="profile-clear-btn"
+            onClick={() => setProfile({
+              customerType: '', employment: '', ageGroup: '',
+              existingProducts: [], interests: []
+            })}>
             Clear Profile
           </button>
         )}
@@ -309,23 +305,21 @@ function ProfilePanel({ profile, setProfile }) {
   )
 }
 
-/* ─── Main App ─────────────────────────────────────────────────────────────── */
+/* ─── Main App ──────────────────────────────────────────────────────────────── */
 export default function App() {
-  const [view, setView] = useState('chat')       // 'chat' | 'upload' | 'profile'
+  const [view, setView] = useState('chat')
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [serverStatus, setServerStatus] = useState('loading')
   const [userProfile, setUserProfile] = useState({
     customerType: '', employment: '', ageGroup: '',
-    existingProducts: [], interests: []
+    existingProducts: [], interests: [],
   })
   const bottomRef = useRef()
   const textareaRef = useRef()
-  // Stable session ID — one per page load, unique per browser tab
   const sessionId = useRef(crypto.randomUUID()).current
 
-  // Build a compact user_context object — only include non-empty fields
   const buildUserContext = () => {
     const ctx = {}
     if (userProfile.customerType) ctx.customer_type = userProfile.customerType
@@ -335,29 +329,23 @@ export default function App() {
     if (userProfile.interests.length) ctx.interests = userProfile.interests
     return Object.keys(ctx).length ? ctx : null
   }
-
   const hasProfile = buildUserContext() !== null
 
-  // ── Health check on mount ──────────────────────────────────────────────────
   React.useEffect(() => {
     fetch(`${API}/health`)
       .then(r => r.ok ? setServerStatus('online') : setServerStatus('error'))
       .catch(() => setServerStatus('error'))
   }, [])
 
-  // ── Auto-scroll ────────────────────────────────────────────────────────────
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  // ── Send message ───────────────────────────────────────────────────────────
   const sendMessage = useCallback(async (query) => {
     const text = (query || input).trim()
     if (!text || loading) return
 
-    setMessages(prev => [...prev, {
-      role: 'user', content: text, time: new Date()
-    }])
+    setMessages(prev => [...prev, { role: 'user', content: text, time: new Date() }])
     setInput('')
     setLoading(true)
 
@@ -383,7 +371,7 @@ export default function App() {
     } catch {
       setMessages(prev => [...prev, {
         role: 'bot',
-        content: '⚠️ Could not reach the NUST Bank server. Please ensure the backend is running.',
+        content: 'Could not reach the NUST Bank server. Please ensure the backend is running.',
         time: new Date(),
       }])
     } finally {
@@ -397,24 +385,22 @@ export default function App() {
 
   const clearChat = () => {
     setMessages([])
-    // Also wipe server-side history so the model forgets previous turns
     fetch(`${API}/chat/clear?session_id=${sessionId}`, { method: 'POST' }).catch(() => { })
   }
 
-  // ── Sidebar nav items ──────────────────────────────────────────────────────
   const navItems = [
-    { id: 'chat', icon: '💬', label: 'AI Assistant' },
-    { id: 'profile', icon: '👤', label: 'My Profile' },
-    { id: 'upload', icon: '📤', label: 'Upload Document' },
+    { id: 'chat', icon: <MessageSquare size={16} />, label: 'AI Assistant' },
+    { id: 'profile', icon: <User size={16} />, label: 'My Profile' },
+    { id: 'upload', icon: <Upload size={16} />, label: 'Upload Document' },
   ]
 
   return (
     <div className="app-shell">
 
-      {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
+      {/* ── Sidebar ──────────────────────────────────────────────────────────── */}
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <div className="logo-icon">🏦</div>
+          <div className="logo-icon"><Landmark size={20} /></div>
           <div className="logo-text">
             <h2>NUST Bank</h2>
             <span>AI Customer Service</span>
@@ -441,18 +427,23 @@ export default function App() {
         </div>
       </aside>
 
-      {/* ── Chat Main ───────────────────────────────────────────────────────── */}
+      {/* ── Main ─────────────────────────────────────────────────────────────── */}
       <main className="chat-main">
         <header className="chat-header">
           <div className="chat-header-info">
             <h1>
-              {view === 'chat' ? 'AI Banking Assistant' : view === 'upload' ? 'Document Upload' : 'My Profile'}
+              {view === 'chat' ? 'AI Banking Assistant'
+                : view === 'upload' ? 'Document Upload'
+                  : 'My Profile'}
             </h1>
             <p>
               {view === 'chat'
-                ? <>
-                  Powered by NUST Bank knowledge base · Qwen 2.5-3B
-                  {hasProfile && <span className="profile-badge">👤 Profile active</span>}
+                ? <>Powered by NUST Bank knowledge base · Qwen 2.5-3B
+                  {hasProfile && (
+                    <span className="profile-badge">
+                      <CheckCircle size={10} /> Profile active
+                    </span>
+                  )}
                 </>
                 : view === 'upload'
                   ? 'Add new knowledge to the AI in real-time'
@@ -462,10 +453,16 @@ export default function App() {
           </div>
           {view === 'chat' && (
             <div className="header-actions">
-              <button className="icon-btn" title="My Profile" onClick={() => setView('profile')}>
-                {hasProfile ? '👤' : '👥'}
+              <button
+                className={`icon-btn ${hasProfile ? 'active' : ''}`}
+                title="My Profile"
+                onClick={() => setView('profile')}
+              >
+                {hasProfile ? <User size={16} /> : <Users size={16} />}
               </button>
-              <button className="icon-btn" title="Clear Chat" onClick={clearChat}>🗑️</button>
+              <button className="icon-btn" title="Clear Chat" onClick={clearChat}>
+                <Trash2 size={16} />
+              </button>
             </div>
           )}
         </header>
@@ -479,7 +476,7 @@ export default function App() {
             <div className="messages-area">
               {messages.length === 0 ? (
                 <div className="welcome-screen">
-                  <div className="welcome-icon">🏦</div>
+                  <div className="welcome-icon"><Landmark size={36} strokeWidth={1.5} /></div>
                   <h2>How can I help you today?</h2>
                   <p>Ask me anything about NUST Bank — accounts, transfers, loans, and more. I'm here to help 24/7.</p>
                   <div className="quick-chips">
@@ -516,7 +513,7 @@ export default function App() {
                   disabled={!input.trim() || loading}
                   title="Send (Enter)"
                 >
-                  ↑
+                  <ArrowUp size={18} />
                 </button>
               </div>
               <p className="input-hint">Press Enter to send · Shift+Enter for new line</p>
