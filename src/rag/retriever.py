@@ -22,7 +22,7 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from config.settings import (
     FAISS_INDEX_PATH, METADATA_PATH,
-    EMBEDDING_MODEL, TOP_K_RESULTS, MIN_SCORE_THRESHOLD
+    EMBEDDING_MODEL, TOP_K_RESULTS, MIN_SCORE_THRESHOLD, DEVICE
 )
 
 
@@ -36,9 +36,9 @@ class NustBankRetriever:
         logger.info("[Retriever] Initialising NUST Bank knowledge retriever...")
 
         # ── Load embedding model ──────────────────────────────────────────────
-        logger.debug(f"[Retriever] Loading embedding model: {EMBEDDING_MODEL}")
-        self.embedder = SentenceTransformer(EMBEDDING_MODEL, trust_remote_code=True)
-        logger.success("[Retriever] Embedding model loaded.")
+        logger.debug(f"[Retriever] Loading embedding model: {EMBEDDING_MODEL} on {DEVICE}")
+        self.embedder = SentenceTransformer(EMBEDDING_MODEL, device=DEVICE, trust_remote_code=True)
+        logger.success(f"[Retriever] Embedding model loaded on {DEVICE}.")
 
         # ── Load FAISS index ──────────────────────────────────────────────────
         if not FAISS_INDEX_PATH.exists():

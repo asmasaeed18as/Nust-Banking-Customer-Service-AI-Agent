@@ -21,16 +21,19 @@ LOGS_DIR            = ROOT_DIR / "logs"
 EMBEDDING_MODEL     = "Alibaba-NLP/gte-large-en-v1.5"  # 1024-dim, MTEB 65.4, English retrieval
 EMBEDDING_DIMENSION = 1024
 
+# ── Device ────────────────────────────────────────────────────────────────────
+import torch
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
 # ── Retrieval (RAG) ───────────────────────────────────────────────────────────
 TOP_K_RESULTS       = 5       # Number of FAISS chunks returned per query
 MIN_SCORE_THRESHOLD = 0.35    # Raised from 0.30 — gte-large scores are tighter/higher
 
 # ── LLM Configuration ─────────────────────────────────────────────────────────
-# Primary: Qwen2.5-3B-Instruct via HuggingFace Inference API (free, no GPU)
-# Fallback: Local model loading if HF API is unavailable
-LLM_PROVIDER        = "hf_api"           # "hf_api" | "local"
-HF_MODEL_ID         = "Qwen/Qwen2.5-3B-Instruct"
-HF_API_TOKEN        = os.getenv("HF_API_TOKEN", "")  # reads from .env
+# Provider options: "hf_api" (HuggingFace Inference API) | "local" (GPU)
+LLM_PROVIDER        = "hf_api"
+HF_MODEL_ID         = "Qwen/Qwen2.5-7B-Instruct"
+HF_API_TOKEN        = os.getenv("HF_API_TOKEN") or os.getenv("HF_API_KEY")
 
 # Local model settings (used if LLM_PROVIDER = "local")
 LOCAL_MODEL_PATH    = HF_MODEL_ID        # will be downloaded by HF

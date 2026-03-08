@@ -129,25 +129,20 @@ class NustBankRAGPipeline:
             }
 
         # ── Step 2: Augment query with history for better retrieval ───────────
-        # Prepend the last 2 turns so vague queries like "what are its rates?"
-        # resolve correctly against the embedding index.
+        # Only prepend the last 1-2 User queries to resolve coreference (it/that/those)
+        # We avoid prepending the assistant's previous "I don't know" answers to prevent contamination.
         augmented_query = query
         if history:
-            recent = history[-2:]   # last 2 turns is sufficient for retrieval
-            history_context = " ".join(
-                f"{h['query']} {h['answer'][:100]}" for h in recent
-            )
+            recent_user_queries = [h['query'] for h in history[-2:]]
+            history_context = " ".join(recent_user_queries)
             augmented_query = f"{history_context} {query}"
-            logger.debug(f"[Pipeline] Augmented query for retrieval: '{augmented_query[:120]}...'")
+            logger.debug(f"[Pipeline] Augmented query for retrieval: '{augmented_query}'")
 
         # ── Step 3: Retrieval ─────────────────────────────────────────────────
         chunks = self.retriever.retrieve(augmented_query, top_k=TOP_K_RESULTS)
         logger.info(f"[Pipeline] Retrieved {len(chunks)} relevant chunks.")
         for c in chunks:
-            logger.debug(
-                f"[Pipeline]   Rank {c['rank']} | Score {c['score']} | "
-                f"{c['source']} | Q: {c['question'][:55]}..."
-            )
+            logger.info(f"[Pipeline]   - Chunk {c['rank']} [{c['score']}]: Q: {c['question'][:60]}... | A: {c['answer'][:60]}...")
 
         # ── Step 4: Prompt Construction (with history injected) ───────────────
         prompt = build_prompt(query, chunks, history=history, user_context=user_context)
