@@ -23,13 +23,20 @@ from typing import Tuple
 JAILBREAK_PATTERNS = [
     r"ignore (previous|all|your) instructions",
     r"you are now (DAN|an? unrestricted|an? jailbroken)",
-    r"pretend (you have no|you are not)",
+    r"pretend (you have no|you are not|you are a)",
     r"do anything now",
     r"bypass (your|the) (restrictions|rules|guidelines|filter)",
     r"act as (if you have no|a different|an unrestricted)",
     r"forget (you are|you're) a bank",
     r"reveal (your|the) (system prompt|instructions|prompt)",
     r"what is your (system prompt|initial prompt)",
+    r"roleplay as",
+    r"hypothetically (speaking|if you|could you)",
+    r"in a fictional (world|scenario|story)",
+    r"for (a story|a novel|creative writing|fiction)",
+    r"jailbreak",
+    r"disregard (your|all|previous)",
+    r"override (your|the) (safety|filter|rules)",
 ]
 
 # ── Pre-LLM: Off-topic patterns (obvious non-banking topics) ─────────────────
@@ -44,6 +51,7 @@ OFF_TOPIC_PATTERNS = [
 FORBIDDEN_OUTPUT_PATTERNS = [
     r"PK\d{2}[A-Z]{4}\d{16}",   # IBAN pattern
     r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b",  # card number
+    r"\b\d{5}-\d{7}-\d{1}\b",   # CNIC (Pakistani national ID: 12345-1234567-1)
 ]
 
 MAX_QUERY_LENGTH = 1500  # characters
