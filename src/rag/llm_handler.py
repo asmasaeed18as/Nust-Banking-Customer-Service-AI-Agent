@@ -58,33 +58,38 @@ class LLMHandler:
                 "Requests will be rate-limited (free anonymous tier). "
                 "Set HF_API_TOKEN in your .env for higher limits."
             )
-        self.client = InferenceClient(model=HF_MODEL_ID, token=token or None)
+        self.client = InferenceClient(
+            model=HF_MODEL_ID,
+            token=token or None,
+        )
         logger.success(f"[LLMHandler] HuggingFace API client ready → {HF_MODEL_ID}")
         self._mode = "hf_api"
+
 
     # ── Local transformers model ───────────────────────────────────────────────
     def _init_local(self):
         import torch
-        from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+        from transformers import AutoTokenizer, AutoModelForCausalLM
 
-        logger.info("[LLMHandler] Loading local model (this may take a few minutes)...")
+        logger.info(f"[LLMHandler] Loading local model: {HF_MODEL_ID} ...")
+        logger.info(f"[LLMHandler] Device: {'CUDA — ' + torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'}")
 
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16,
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            HF_MODEL_ID, trust_remote_code=True
         )
-
-        self.tokenizer = AutoTokenizer.from_pretrained(HF_MODEL_ID, trust_remote_code=True)
         self.model = AutoModelForCausalLM.from_pretrained(
             HF_MODEL_ID,
-            quantization_config=bnb_config,
-            device_map="auto",
+            torch_dtype=torch.float16,   # ~6 GB VRAM for 3B — fits RTX 3080 (10 GB)
+            device_map="auto",           # sends to CUDA automatically
             trust_remote_code=True,
         )
         self.model.eval()
-        logger.success(f"[LLMHandler] Local model loaded: {HF_MODEL_ID}")
+
+        if torch.cuda.is_available():
+            vram_used = torch.cuda.memory_allocated() / 1e9
+            logger.success(f"[LLMHandler] Local model loaded on GPU. VRAM used: {vram_used:.1f} GB")
+        else:
+            logger.success(f"[LLMHandler] Local model loaded on CPU.")
         self._mode = "local"
 
     # ── Generate ──────────────────────────────────────────────────────────────
