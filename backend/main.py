@@ -66,6 +66,8 @@ async def startup_event():
 class ChatRequest(BaseModel):
     query: str
     top_k: int = 3
+    session_id: str = "default"   # unique per browser tab / user
+    user_context: dict = {}        # optional user profile (sent only when set)
 
 class SourceChunk(BaseModel):
     rank: int
@@ -101,10 +103,22 @@ async def chat(request: ChatRequest):
     if not pipeline:
         raise HTTPException(status_code=503, detail="Pipeline not ready yet.")
 
-    logger.info(f"[API /chat] Received query: '{request.query}'")
+    logger.info(f"[API /chat] Session: '{request.session_id}' | Query: '{request.query}'")
 
-    result = pipeline.answer(request.query)
+    result = pipeline.answer(
+        request.query,
+        session_id=request.session_id,
+        user_context=request.user_context or None
+    )
     return ChatResponse(**result)
+
+
+@app.post("/api/chat/clear")
+async def clear_chat(session_id: str = "default"):
+    """Clear conversation history for a session (called when user clicks Clear Chat)."""
+    if pipeline:
+        pipeline.clear_session(session_id)
+    return {"status": "cleared", "session_id": session_id}
 
 
 @app.post("/api/upload")
