@@ -18,12 +18,12 @@ METADATA_PATH       = VECTOR_STORE_DIR / "bank_metadata.json"
 LOGS_DIR            = ROOT_DIR / "logs"
 
 # ── Embedding Model ───────────────────────────────────────────────────────────
-EMBEDDING_MODEL     = "all-MiniLM-L6-v2"   # 384-dim, fast, locally downloaded
-EMBEDDING_DIMENSION = 384
+EMBEDDING_MODEL     = "Alibaba-NLP/gte-large-en-v1.5"  # 1024-dim, MTEB 65.4, English retrieval
+EMBEDDING_DIMENSION = 1024
 
 # ── Retrieval (RAG) ───────────────────────────────────────────────────────────
 TOP_K_RESULTS       = 3       # Number of FAISS chunks returned per query
-MIN_SCORE_THRESHOLD = 0.30    # Below this cosine score, result is "uncertain"
+MIN_SCORE_THRESHOLD = 0.35    # Raised from 0.30 — gte-large scores are tighter/higher
 
 # ── LLM Configuration ─────────────────────────────────────────────────────────
 # Primary: Qwen2.5-3B-Instruct via HuggingFace Inference API (free, no GPU)

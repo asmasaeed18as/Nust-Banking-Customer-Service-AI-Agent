@@ -17,7 +17,7 @@ except ImportError:
 setup_logger("logs/indexing.log")
 
 class NustBankIndexer:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = "Alibaba-NLP/gte-large-en-v1.5"):
         logger.info(f"Initializing Embedder with model: {model_name}")
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         logger.info(f"Using device: {self.device}")
