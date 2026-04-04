@@ -133,7 +133,7 @@ async def upload_document(file: UploadFile = File(...)):
             detail="Only .json, .csv, or .txt files are supported."
         )
 
-    upload_dir = ROOT / "Bank Knowledge"
+    upload_dir = ROOT / "data" / "raw"
     dest = upload_dir / file.filename
     logger.info(f"[API /upload] Receiving file: {file.filename}")
 

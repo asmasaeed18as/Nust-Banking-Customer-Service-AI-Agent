@@ -112,7 +112,7 @@ class NustBankIngestor:
             logger.error(f"Failed to save processed data: {e}")
 
 if __name__ == "__main__":
-    ingestor = NustBankIngestor("Bank Knowledge")
+    ingestor = NustBankIngestor("data/raw")
     ingestor.ingest_json()
     ingestor.ingest_excel()
     ingestor.save_processed()
