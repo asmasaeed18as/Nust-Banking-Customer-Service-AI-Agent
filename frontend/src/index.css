@@ -938,3 +938,202 @@ body,
   font-weight: 500;
   vertical-align: middle;
 }
+
+/* ─── Admin Dashboard ────────────────────────────────────────────────────── */
+.admin-dashboard {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 24px;
+  padding: 28px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.admin-metrics {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border: 1px solid var(--blue-100);
+}
+
+.metrics-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.metrics-icon {
+  color: var(--blue-500);
+}
+
+.metrics-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.metrics-summary {
+  display: flex;
+  gap: 12px;
+}
+
+.metric-box {
+  flex: 1;
+  background: var(--blue-50);
+  padding: 16px;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-val {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--blue-600);
+  line-height: 1;
+}
+
+.metric-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sources-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.sources-list h4 {
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-400);
+  margin-bottom: 4px;
+}
+
+.source-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--gray-50);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.source-row-icon {
+  color: var(--blue-400);
+  flex-shrink: 0;
+}
+
+.source-name {
+  flex: 1;
+  color: var(--gray-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.source-count {
+  font-weight: 600;
+  color: var(--blue-500);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.admin-upload-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.no-sources {
+  font-size: 13px;
+  color: var(--gray-400);
+  font-style: italic;
+  padding: 12px 0;
+}
+
+.sources-loading span {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--blue-100);
+  border-top-color: var(--blue-500);
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─── Toasts ─────────────────────────────────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 9999;
+}
+
+.toast-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-800);
+  animation: slideInRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  min-width: 280px;
+}
+
+.toast-card.success {
+  border-left: 4px solid #10b981;
+}
+
+.toast-card.success svg {
+  color: #10b981;
+}
+
+.toast-card.error {
+  border-left: 4px solid #ef4444;
+}
+
+.toast-card.error svg {
+  color: #ef4444;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
