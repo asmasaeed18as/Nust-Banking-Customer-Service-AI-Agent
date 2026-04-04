@@ -70,6 +70,7 @@ class LLMHandler:
     def _init_local(self):
         import torch
         from transformers import AutoTokenizer, AutoModelForCausalLM
+        from peft import PeftModel
 
         logger.info(f"[LLMHandler] Loading local model: {HF_MODEL_ID} ...")
         logger.info(f"[LLMHandler] Device: {'CUDA — ' + torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'}")
@@ -77,12 +78,23 @@ class LLMHandler:
         self.tokenizer = AutoTokenizer.from_pretrained(
             HF_MODEL_ID, trust_remote_code=True
         )
-        self.model = AutoModelForCausalLM.from_pretrained(
+        base_model = AutoModelForCausalLM.from_pretrained(
             HF_MODEL_ID,
             torch_dtype=torch.float16,   # ~6 GB VRAM for 3B — fits RTX 3080 (10 GB)
             device_map="auto",           # sends to CUDA automatically
             trust_remote_code=True,
+            attn_implementation="sdpa",  # [ADDED] FlashAttention/SDPA integration for rapid ~3x throughput
         )
+        
+        # Check for Fine-Tuned LoRA adapter to load for production
+        adapter_path = "models/qwen_bank_lora"
+        if os.path.exists(adapter_path):
+            logger.success(f"[LLMHandler] Found Fine-Tuned Adapter at {adapter_path}. Loading onto base model...")
+            self.model = PeftModel.from_pretrained(base_model, adapter_path)
+        else:
+            logger.info("[LLMHandler] No LoRA adapter found. Running base model.")
+            self.model = base_model
+            
         self.model.eval()
 
         if torch.cuda.is_available():
