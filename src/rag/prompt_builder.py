@@ -21,26 +21,26 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from config.settings import BANK_NAME, BOT_NAME, SUPPORT_EMAIL, SUPPORT_UAN
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# System Prompt (injected before every conversation)
-# ─────────────────────────────────────────────────────────────────────────────
-SYSTEM_PROMPT = f"""You are {BOT_NAME}, a professional, friendly, and knowledgeable \
-customer service representative for {BANK_NAME}.
+def get_system_prompt(tone_override: Optional[str] = None) -> str:
+    """Returns the core system rules, allowing an injection of a custom user tone."""
+    tone_instruction = f"Always maintain a warm, professional, and reassuring tone."
+    if tone_override:
+        tone_instruction = f"The user has explicitly requested a {tone_override.upper()} tone. You MUST adjust your conversational style to be {tone_override} while remaining helpful and adhering to banking rules."
+
+    return f"""You are {BOT_NAME}, a knowledgeable AI customer service representative for {BANK_NAME}.
 
 Your responsibilities:
 1. Answer customer questions ONLY using the provided context sections below.
 2. If the answer is clearly in the context, give a complete, helpful response.
-3. If the context does NOT contain enough information, politely say so and \
-direct the customer to contact support:
+3. If the context does NOT contain enough information, politely say so and direct the customer to contact support:
    - Email: {SUPPORT_EMAIL}
    - UAN: {SUPPORT_UAN}
-4. Keep answers concise but complete. Use bullet points for multi-step answers.
+4. Keep answers concise but complete.
 5. NEVER fabricate account numbers, interest rates, or policy details.
 6. NEVER discuss topics unrelated to banking or {BANK_NAME} services.
-7. Always maintain a warm, professional, and reassuring tone.
+7. {tone_instruction}
 8. If asked who you are, say you are the {BOT_NAME} AI assistant.
-9. Use the conversation history to resolve pronouns like "it", "its", "that", \
-"this" — they refer to whatever was discussed most recently.
+9. Use the conversation history to resolve pronouns like "it", "its", "that", "this".
 
 IMPORTANT: Only answer from the CONTEXT provided. Do not use external knowledge."""
 
@@ -65,6 +65,12 @@ def build_prompt(
     """
 
     history = history or []
+    
+    tone_override = None
+    if user_context and user_context.get("preferred_tone"):
+        tone_override = user_context["preferred_tone"]
+        
+    dynamic_system_prompt = get_system_prompt(tone_override)
 
     # ── Format user profile (optional) ───────────────────────────────────────
     profile_block = ""
@@ -80,6 +86,8 @@ def build_prompt(
         for key, label in label_map.items():
             val = user_context.get(key)
             if val:
+                if key == "preferred_tone":
+                    continue # handled by system prompt injector explicitly
                 if isinstance(val, list):
                     lines.append(f"  - {label}: {', '.join(val)}")
                 else:
@@ -152,7 +160,7 @@ def build_prompt(
     )
 
     return {
-        "system"      : SYSTEM_PROMPT,
+        "system"      : dynamic_system_prompt,
         "user"        : user_content,
         "context_used": True,
     }

@@ -54,22 +54,19 @@ class NustBankRetriever:
             self.metadata = json.load(f)
         logger.success(f"[Retriever] Metadata loaded — {len(self.metadata)} chunks.")
 
+        # ── Initialize BM25 (Hybrid Keyword Search) ───────────────────────────
+        from rank_bm25 import BM25Okapi
+        # Create corpus of all chunks to enable keyword matching
+        corpus = [
+            (chunk.get("question", "") + " " + chunk.get("answer", "")).lower().split()
+            for chunk in self.metadata
+        ]
+        self.bm25 = BM25Okapi(corpus)
+        logger.success(f"[Retriever] BM25 keyword index loaded — ready for Hybrid Search.")
+
     def retrieve(self, query: str, top_k: int = TOP_K_RESULTS) -> List[Dict]:
         """
-        Embed `query`, search FAISS, and return enriched chunk dictionaries.
-
-        Applies a two-pass threshold:
-          Pass 1 — MIN_SCORE_THRESHOLD (strict): preferred results
-          Pass 2 — FALLBACK_THRESHOLD (soft): if pass 1 returns nothing,
-                   retry rather than immediately returning empty
-
-        Each returned dict contains:
-          - question  : the matched document question
-          - answer    : the matched document answer
-          - source    : the source file / sheet
-          - category  : the topic category
-          - score     : cosine-like similarity (1 = perfect, 0 = unrelated)
-          - rank      : 1-based retrieval rank
+        Embed `query`, search FAISS and BM25, and fuse using Reciprocal Rank Fusion (RRF).
         """
         if not query.strip():
             logger.warning("[Retriever] Empty query received — returning empty results.")
@@ -78,64 +75,69 @@ class NustBankRetriever:
         logger.info(f"[Retriever] Query: '{query}'")
         t0 = time.perf_counter()
 
-        # ── Embed the query ───────────────────────────────────────────────────
+        # ── 1. Semantic Search (FAISS) ────────────────────────────────────────
         query_vec = self.embedder.encode(
             [query],
             normalize_embeddings=True,
             convert_to_numpy=True
         )
         embed_ms = (time.perf_counter() - t0) * 1000
-        logger.debug(f"[Retriever] Query embedding done in {embed_ms:.1f} ms")
 
-        # ── FAISS search ──────────────────────────────────────────────────────
         t1 = time.perf_counter()
-        distances, indices = self.index.search(query_vec, k=top_k)
+        distances, indices = self.index.search(query_vec, k=top_k * 2) # Fetch extra for pooling
+        
+        # Calculate standard semantic scores for tracking threshold compliance
+        faiss_scores = {idx: round(float(1 - dist / 2), 4) for idx, dist in zip(indices[0], distances[0])}
+
+        # ── 2. Keyword Search (BM25) ──────────────────────────────────────────
+        tokenized_query = query.lower().split()
+        bm25_raw_scores = self.bm25.get_scores(tokenized_query)
+        bm25_indices = np.argsort(bm25_raw_scores)[::-1][:top_k * 2]
+        
         search_ms = (time.perf_counter() - t1) * 1000
-        logger.debug(f"[Retriever] FAISS search done in {search_ms:.2f} ms")
+        logger.debug(f"[Retriever] Hybrid FAISS + BM25 search done in {search_ms:.2f} ms")
 
-        # ── Build results with threshold fallback ─────────────────────────────
-        FALLBACK_THRESHOLD = 0.20   # softer threshold for second pass
+        # ── 3. Reciprocal Rank Fusion (RRF) ───────────────────────────────────
+        RRF_K = 60
+        rrf_scores = {}
+        
+        # Add FAISS Ranks
+        for rank, idx in enumerate(indices[0]):
+            rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 1.0 / (RRF_K + rank + 1)
+            
+        # Add BM25 Ranks
+        for rank, idx in enumerate(bm25_indices):
+            rrf_scores[idx] = rrf_scores.get(idx, 0.0) + 1.0 / (RRF_K + rank + 1)
 
-        for threshold in (MIN_SCORE_THRESHOLD, FALLBACK_THRESHOLD):
-            results = []
-            for rank, (idx, dist) in enumerate(zip(indices[0], distances[0])):
-                score = round(float(1 - dist / 2), 4)
-                chunk = self.metadata[idx]
-
-                if score < threshold:
-                    logger.debug(
-                        f"[Retriever] Rank {rank+1} dropped — score {score:.3f} "
-                        f"below threshold {threshold}"
-                    )
+        # ── 4. Build results (Sorted by RRF Score) ────────────────────────────
+        sorted_candidates = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
+        results = []
+        
+        for rank, (idx, rrf_score) in enumerate(sorted_candidates[:top_k]):
+            chunk = self.metadata[idx]
+            
+            semantic_score = faiss_scores.get(idx, 0.0)
+            bm25_score = bm25_raw_scores[idx]
+            
+            # Threshold fallback protection (drop bad chunks)
+            if semantic_score < MIN_SCORE_THRESHOLD:
+                # If semantic fails explicitly but BM25 is very confident, keep it
+                if bm25_score < 3.0: 
                     continue
-
-                result = {
-                    "rank"    : rank + 1,
-                    "score"   : score,
-                    "question": chunk.get("question", ""),
-                    "answer"  : chunk.get("answer", ""),
-                    "source"  : chunk.get("source", "Unknown"),
-                    "category": chunk.get("category", "General"),
-                }
-                results.append(result)
-
-                logger.debug(
-                    f"[Retriever] Rank {rank+1} | Score: {score:.3f} | "
-                    f"Src: {chunk.get('source','?')} | "
-                    f"Q: {chunk.get('question','')[:60]}..."
-                )
-
-            if results:
-                if threshold == FALLBACK_THRESHOLD and threshold < MIN_SCORE_THRESHOLD:
-                    logger.warning(
-                        f"[Retriever] Used fallback threshold {threshold} — "
-                        f"no chunks passed strict threshold {MIN_SCORE_THRESHOLD}"
-                    )
-                break  # got results, stop
+                    
+            result = {
+                "rank"    : rank + 1,
+                "score"   : semantic_score, # Passed strictly for UI
+                "rrf_score": round(rrf_score, 4),
+                "question": chunk.get("question", ""),
+                "answer"  : chunk.get("answer", ""),
+                "source"  : chunk.get("source", "Unknown"),
+                "category": chunk.get("category", "General"),
+            }
+            results.append(result)
 
         total_ms = (time.perf_counter() - t0) * 1000
         logger.info(
-            f"[Retriever] Retrieved {len(results)} chunks in {total_ms:.1f} ms "
-            f"(embed: {embed_ms:.1f} ms, search: {search_ms:.2f} ms)"
+            f"[Retriever] RRF Hybrid Search retrieved {len(results)} chunks in {total_ms:.1f} ms"
         )
         return results
