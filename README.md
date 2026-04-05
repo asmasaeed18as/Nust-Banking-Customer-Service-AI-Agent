@@ -56,8 +56,8 @@ The system is fully modular: each stage is an independent Python class, making i
 ### 1. Data Ingestion (`src/ingest.py`)
 
 Reads raw knowledge from two formats:
-- **JSON** (`Bank Knowledge/*.json`): structured FAQ arrays with `category → questions → answer` hierarchy.
-- **Excel** (`Bank Knowledge/*.xlsx`): product sheets for individual account types and loan products.
+- **JSON** (`data/raw/*.json`): structured FAQ arrays with `category → questions → answer` hierarchy.
+- **Excel** (`data/raw/*.xlsx`): product sheets for individual account types and loan products.
 
 Each document is flattened into chunks of the form:
 ```json
@@ -150,7 +150,7 @@ No profile data is persisted server-side; it is scoped to the browser session.
 ### 9. Real-Time Knowledge Updates (`/api/upload`)
 
 New documents can be uploaded via the UI. The backend:
-1. Saves the file to `Bank Knowledge/`.
+1. Saves the file to `data/raw/`.
 2. Re-runs the ingestor over all documents.
 3. Re-embeds all chunks and rebuilds the FAISS index.
 4. Reloads the pipeline in memory.
@@ -246,8 +246,8 @@ When a user sends a query, the following happens in sequence:
 ## Data Pipeline
 
 ```
-Bank Knowledge/*.json   ─┐
-Bank Knowledge/*.xlsx   ─┤─► NustBankIngestor ─► bank_knowledge_chunks.json
+data/raw/*.json   ─┐
+data/raw/*.xlsx   ─┤─► NustBankIngestor ─► bank_knowledge_chunks.json
                           │
                           └─► NustBankIndexer ─► bank_faiss_index.bin
                                                   bank_metadata.json
@@ -326,32 +326,24 @@ npm run dev
 
 ```
 .
-├── Bank Knowledge/          # Raw knowledge files (JSON, Excel)
-├── backend/
-│   └── main.py              # FastAPI app, route definitions
-├── config/
-│   └── settings.py          # All tuneable parameters
+├── backend/                 # FastAPI server implementation
+├── config/                  # Global system settings
 ├── data/
-│   ├── processed/
-│   │   └── bank_knowledge_chunks.json
-│   └── vector_store/
-│       ├── bank_faiss_index.bin
-│       └── bank_metadata.json
-├── frontend/
-│   └── src/
-│       ├── App.jsx           # React UI (chat, profile, upload views)
-│       └── index.css         # Design system and component styles
-├── src/
-│   ├── guardrails/
-│   │   └── guard.py          # Input/output guardrail logic
-│   ├── ingest.py             # Document ingestion and chunking
-│   ├── rag/
-│   │   ├── llm_handler.py    # LLM API wrapper
-│   │   ├── pipeline.py       # Orchestration, session memory
-│   │   ├── prompt_builder.py # Prompt assembly (profile + history + context)
-│   │   └── retriever.py      # FAISS embedding search
-│   └── vector_store.py       # Index building and loading
-├── logs/                     # Runtime logs (pipeline, API, retriever)
+│   ├── processed/           # Chunked dataset
+│   ├── raw/                 # Original docs (Excel, JSON)
+│   └── vector_store/        # FAISS index + metadata
+├── docs/                    # Technical reports and specifications
+├── frontend/                # React dashboard + styles
+├── logs/                    # Standardized system logs
+├── models/                  # Local model weights / adapters
+├── scripts/                 # Data prep & training utilities (Fine-tuning, Cooking)
+├── src/                     # Core RAG Application logic
+│   ├── guardrails/          # Safety and PII logic
+│   ├── ingest.py            # Ingestion logic
+│   ├── rag/                 # RAG pipeline components
+│   └── vector_store.py      # Embedding logic
+├── tests/                   # Automated Pipeline & Guardrail tests
+├── README.md
 ├── requirements.txt
 └── .env
 ```

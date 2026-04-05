@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react'
 import {
   Landmark, User, Users, MessageSquare, Upload, Trash2,
   Copy, Check, ShieldX, AlertTriangle, FileText, FolderOpen,
-  ArrowUp, CheckCircle,
+  ArrowUp, CheckCircle, Database, Info,
 } from 'lucide-react'
 
 const API = 'http://localhost:8000/api'
@@ -126,27 +126,57 @@ function TypingIndicator() {
   )
 }
 
-/* ─── Upload Panel ──────────────────────────────────────────────────────────── */
-function UploadPanel() {
+/* ─── Admin Dashboard ──────────────────────────────────────────────────────────── */
+function AdminDashboard({ addToast }) {
   const [status, setStatus] = useState(null)
   const [msg, setMsg] = useState('')
   const [dragging, setDragging] = useState(false)
+  const [metrics, setMetrics] = useState({ total_chunks: 0, sources: [] })
+  const [loadingMetrics, setLoadingMetrics] = useState(true)
   const fileRef = useRef()
+
+  const fetchMetrics = async () => {
+    try {
+      const res = await fetch(`${API}/sources`)
+      if (res.ok) {
+        const data = await res.json()
+        setMetrics(data)
+      }
+    } catch {
+      // Index might be entirely empty initially
+    } finally {
+      setLoadingMetrics(false)
+    }
+  }
+
+  React.useEffect(() => {
+    fetchMetrics()
+  }, [])
 
   const handleFile = async (file) => {
     if (!file) return
     const fd = new FormData()
     fd.append('file', file)
     setStatus(null)
-    setMsg('Uploading and indexing...')
+    setMsg('Uploading and rebuilding Vector Index...')
     try {
       const res = await fetch(`${API}/upload`, { method: 'POST', body: fd })
       const data = await res.json()
-      if (res.ok) { setStatus('ok'); setMsg(`Ingested: ${data.message}`) }
-      else { setStatus('error'); setMsg(`Failed: ${data.detail}`) }
+      if (res.ok) {
+        setStatus('ok')
+        setMsg(`Success! Rebuild complete.`)
+        addToast(`Uploaded: ${file.name}. Knowledge Base extended!`, 'success')
+        fetchMetrics()
+      }
+      else {
+        setStatus('error')
+        setMsg(`Failed: ${data.detail}`)
+        addToast(`Upload failed: ${data.detail}`, 'error')
+      }
     } catch {
       setStatus('error')
       setMsg('Could not connect to backend.')
+      addToast('Connection to backend failed.', 'error')
     }
   }
 
@@ -156,31 +186,66 @@ function UploadPanel() {
   }
 
   return (
-    <div className="upload-panel">
-      <div
-        className={`upload-card ${dragging ? 'drag-over' : ''}`}
-        onClick={() => fileRef.current.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-      >
-        <div className="upload-icon"><FolderOpen size={44} strokeWidth={1.3} /></div>
-        <h3>Upload Bank Document</h3>
-        <p>Add new FAQs, policies, or product information.<br />The AI will learn from it instantly.</p>
-        <div className="upload-formats">
-          <span className="format-badge">JSON</span>
-          <span className="format-badge">CSV</span>
-          <span className="format-badge">TXT</span>
+    <div className="admin-dashboard">
+      <div className="admin-metrics">
+        <div className="metrics-header">
+          <Database size={20} className="metrics-icon" />
+          <h3>Knowledge Index</h3>
         </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".json,.csv,.txt"
-          style={{ display: 'none' }}
-          onChange={(e) => handleFile(e.target.files[0])}
-        />
+        <div className="metrics-summary">
+          <div className="metric-box">
+            <span className="metric-val">{metrics.total_chunks}</span>
+            <span className="metric-label">Active Chunks</span>
+          </div>
+          <div className="metric-box">
+            <span className="metric-val">{loadingMetrics ? '-' : metrics.sources.length}</span>
+            <span className="metric-label">Files Indexed</span>
+          </div>
+        </div>
+        <div className="sources-list">
+          <h4>Indexed Sources</h4>
+          {loadingMetrics ? (
+            <div className="sources-loading"><span /></div>
+          ) : metrics.sources.length === 0 ? (
+            <p className="no-sources">No documents ingested yet.</p>
+          ) : (
+            metrics.sources.map(s => (
+              <div key={s.name} className="source-row">
+                <FileText size={14} className="source-row-icon" />
+                <span className="source-name">{s.name}</span>
+                <span className="source-count">{s.count} chunks</span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
-      {msg && <div className={`upload-result ${status === 'error' ? 'error' : ''}`}>{msg}</div>}
+
+      <div className="admin-upload-wrapper">
+        <div
+          className={`upload-card ${dragging ? 'drag-over' : ''}`}
+          onClick={() => fileRef.current.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+        >
+          <div className="upload-icon"><Upload size={44} strokeWidth={1.3} /></div>
+          <h3>Upload Secure Content</h3>
+          <p>Drop knowledge files here to instantly enrich the AI agent.</p>
+          <div className="upload-formats">
+            <span className="format-badge">JSON</span>
+            <span className="format-badge">CSV</span>
+            <span className="format-badge">TXT</span>
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".json,.csv,.txt"
+            style={{ display: 'none' }}
+            onChange={(e) => handleFile(e.target.files[0])}
+          />
+        </div>
+        {msg && <div className={`upload-result ${status === 'error' ? 'error' : ''}`}>{msg}</div>}
+      </div>
     </div>
   )
 }
@@ -201,7 +266,7 @@ function ProfilePanel({ profile, setProfile }) {
     return { ...prev, [field]: arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val] }
   })
 
-  const hasData = profile.customerType || profile.employment || profile.ageGroup ||
+  const hasData = profile.customerType || profile.employment || profile.ageGroup || profile.preferredTone ||
     profile.existingProducts.length > 0 || profile.interests.length > 0
 
   return (
@@ -222,6 +287,18 @@ function ProfilePanel({ profile, setProfile }) {
       )}
 
       <div className="profile-form">
+        <div className="profile-section">
+          <label className="profile-label">Preferred AI Tone</label>
+          <select className="profile-select" value={profile.preferredTone || ''}
+            onChange={e => setProfile(p => ({ ...p, preferredTone: e.target.value }))}>
+            <option value="">Default (Professional & Friendly)</option>
+            <option value="highly formal and corporate">Highly Formal</option>
+            <option value="casual, short, and relaxed">Casual & Concise</option>
+            <option value="deeply empathetic and reassuring">Empathetic & Caring</option>
+            <option value="highly technical and direct">Technical & Direct</option>
+          </select>
+        </div>
+
         <div className="profile-section">
           <label className="profile-label">Customer Type</label>
           <select className="profile-select" value={profile.customerType}
@@ -294,7 +371,7 @@ function ProfilePanel({ profile, setProfile }) {
         {hasData && (
           <button className="profile-clear-btn"
             onClick={() => setProfile({
-              customerType: '', employment: '', ageGroup: '',
+              customerType: '', employment: '', ageGroup: '', preferredTone: '',
               existingProducts: [], interests: []
             })}>
             Clear Profile
@@ -312,8 +389,10 @@ export default function App() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [serverStatus, setServerStatus] = useState('loading')
+  const [toasts, setToasts] = useState([])
+
   const [userProfile, setUserProfile] = useState({
-    customerType: '', employment: '', ageGroup: '',
+    customerType: '', employment: '', ageGroup: '', preferredTone: '',
     existingProducts: [], interests: [],
   })
   const bottomRef = useRef()
@@ -322,6 +401,7 @@ export default function App() {
 
   const buildUserContext = () => {
     const ctx = {}
+    if (userProfile.preferredTone) ctx.preferred_tone = userProfile.preferredTone
     if (userProfile.customerType) ctx.customer_type = userProfile.customerType
     if (userProfile.employment) ctx.employment = userProfile.employment
     if (userProfile.ageGroup) ctx.age_group = userProfile.ageGroup
@@ -340,6 +420,14 @@ export default function App() {
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  const addToast = (msg, type = 'info') => {
+    const id = Date.now() + Math.random()
+    setToasts(prev => [...prev, { id, msg, type }])
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id))
+    }, 4000)
+  }
 
   const sendMessage = useCallback(async (query) => {
     const text = (query || input).trim()
@@ -438,7 +526,7 @@ export default function App() {
             </h1>
             <p>
               {view === 'chat'
-                ? <>Powered by NUST Bank knowledge base · Qwen 2.5-3B
+                ? <>Powered by NUST Bank knowledge base · Secure Enterprise AI
                   {hasProfile && (
                     <span className="profile-badge">
                       <CheckCircle size={10} /> Profile active
@@ -468,7 +556,7 @@ export default function App() {
         </header>
 
         {view === 'upload' ? (
-          <UploadPanel />
+          <AdminDashboard addToast={addToast} />
         ) : view === 'profile' ? (
           <ProfilePanel profile={userProfile} setProfile={setUserProfile} />
         ) : (
@@ -521,6 +609,16 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* ── Toasts ────────────────────────────────────────────────────────────── */}
+      <div className="toast-container">
+        {toasts.map(t => (
+          <div key={t.id} className={`toast-card ${t.type}`}>
+            {t.type === 'success' ? <CheckCircle size={16} /> : t.type === 'error' ? <AlertTriangle size={16} /> : <Info size={16} />}
+            <span>{t.msg}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

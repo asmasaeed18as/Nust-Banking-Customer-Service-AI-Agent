@@ -18,8 +18,8 @@ METADATA_PATH       = VECTOR_STORE_DIR / "bank_metadata.json"
 LOGS_DIR            = ROOT_DIR / "logs"
 
 # ── Embedding Model ───────────────────────────────────────────────────────────
-EMBEDDING_MODEL     = "Alibaba-NLP/gte-large-en-v1.5"  # 1024-dim, MTEB 65.4, English retrieval
-EMBEDDING_DIMENSION = 1024
+EMBEDDING_MODEL     = "sentence-transformers/all-MiniLM-L6-v2"  # 384-dim, Stable & Fast
+EMBEDDING_DIMENSION = 384
 
 # ── Device ────────────────────────────────────────────────────────────────────
 import torch
@@ -31,8 +31,8 @@ MIN_SCORE_THRESHOLD = 0.35    # Raised from 0.30 — gte-large scores are tighte
 
 # ── LLM Configuration ─────────────────────────────────────────────────────────
 # Provider options: "hf_api" (HuggingFace Inference API) | "local" (GPU)
-LLM_PROVIDER        = "hf_api"
-HF_MODEL_ID         = "Qwen/Qwen2.5-7B-Instruct"
+LLM_PROVIDER        = "local"
+HF_MODEL_ID         = "Qwen/Qwen2.5-3B-Instruct"
 HF_API_TOKEN        = os.getenv("HF_API_TOKEN") or os.getenv("HF_API_KEY")
 
 # Local model settings (used if LLM_PROVIDER = "local")

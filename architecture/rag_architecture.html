@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>NUST Bank RAG — Architecture</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f8fc;
+            padding: 20px 24px;
+        }
+
+        .hdr {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .hdr h1 {
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #0d1f3c;
+        }
+
+        .hdr p {
+            font-size: 11px;
+            color: #5a7090;
+            margin-top: 2px;
+            font-style: italic;
+        }
+
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            justify-content: center;
+            background: #fff;
+            border: 1px solid #b0c8e8;
+            border-radius: 6px;
+            padding: 6px 16px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            font-size: 11px;
+            font-weight: 500;
+            width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .li {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .lb {
+            width: 11px;
+            height: 11px;
+            border-radius: 2px;
+        }
+
+        /* canvas */
+        .canvas {
+            position: relative;
+            width: 1240px;
+            height: 700px;
+            margin: 0 auto;
+        }
+
+        /* ── boxes ── */
+        .box {
+            border-radius: 7px;
+            padding: 9px 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .box-title {
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            margin-top: 5px;
+        }
+
+        .tp {
+            font-size: 9.5px;
+            font-weight: 600;
+            white-space: nowrap;
+            padding: 2px 7px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.08);
+            color: inherit;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+        }
+
+        .teal {
+            background: #e4f4ef;
+            border: 2px solid #1e7e68;
+        }
+
+        .teal .box-title {
+            color: #104e3e;
+        }
+
+        .orange {
+            background: #fff4e0;
+            border: 2px solid #c07000;
+        }
+
+        .orange .box-title {
+            color: #804800;
+        }
+
+        .blue {
+            background: #e2eef8;
+            border: 2px solid #1e60a0;
+        }
+
+        .blue .box-title {
+            color: #0d3a70;
+        }
+
+        .red {
+            background: #fdf0f0;
+            border: 2px solid #b83030;
+        }
+
+        .red .box-title {
+            color: #8c1818;
+        }
+
+        /* ── groups ── */
+        .group {
+            position: absolute;
+            border-radius: 10px;
+            padding: 9px 9px 9px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .group-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 7px;
+            opacity: 0.85;
+        }
+
+        .group-inner {
+            display: flex;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .group-inner .box {
+            flex: 1;
+        }
+
+        .gt {
+            background: #d6ece5;
+            border: 2.5px solid #1e7e68;
+        }
+
+        .gt .group-label {
+            color: #104e3e;
+        }
+
+        .go {
+            background: #faecd4;
+            border: 2.5px solid #c07000;
+        }
+
+        .go .group-label {
+            color: #804800;
+        }
+
+        /* user icon */
+        .user-area {
+            position: absolute;
+            text-align: center;
+        }
+
+        .user-area span {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #0d1f3c;
+            margin-top: 4px;
+        }
+
+        /* arrow labels */
+        .al {
+            position: absolute;
+            font-size: 11px;
+            font-weight: 600;
+            font-style: normal;
+            color: #0d2040;
+            white-space: nowrap;
+            pointer-events: none;
+            background: #ffffff;
+            border: 1px solid #b0c8e8;
+            border-radius: 4px;
+            padding: 2px 6px;
+            box-shadow: 0 1px 3px rgba(13, 31, 60, 0.10);
+            z-index: 10;
+        }
+
+        /* example query callouts - cleaner pill style */
+        .eq {
+            position: absolute;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #333;
+            background: #e1e8f0;
+            border: 1.5px solid #a0b0c5;
+            border-radius: 6px;
+            padding: 4px 10px;
+            pointer-events: none;
+            z-index: 20;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .eq::before {
+            content: "EXAMPLE: ";
+            font-size: 9px;
+            opacity: 0.6;
+            margin-right: 4px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="hdr">
+        <h1>NUST Bank AI Customer Service Agent — System Architecture</h1>
+        <p>Saleha Zainab Fatima (404329) | Asma Saeed (416741)</p>
+    </div>
+
+    <div class="legend">
+        <span
+            style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a7090">Legend</span>
+        <div class="li">
+            <div class="lb" style="background:#d6ece5;border:2px solid #1e7e68"></div>RAG / Processing
+        </div>
+        <div class="li">
+            <div class="lb" style="background:#faecd4;border:2px solid #c07000"></div>API Gateway
+        </div>
+        <div class="li">
+            <div class="lb" style="background:#e2eef8;border:2px solid #1e60a0"></div>Data Store
+        </div>
+        <div class="li">
+            <div class="lb" style="background:#fdf0f0;border:2px solid #b83030"></div>Guardrail
+        </div>
+        <div style="width:1px;height:14px;background:#b0c8e8"></div>
+        <div class="li">
+            <svg width="30" height="10">
+                <line x1="0" y1="5" x2="22" y2="5" stroke="#0d2040" stroke-width="1.5" />
+                <polygon points="20,2 28,5 20,8" fill="#0d2040" />
+            </svg>
+            Data flow
+        </div>
+        <div class="li">
+            <svg width="30" height="10">
+                <line x1="0" y1="5" x2="22" y2="5" stroke="#4080c0" stroke-width="1.5" stroke-dasharray="4,2" />
+                <polygon points="20,2 28,5 20,8" fill="#4080c0" />
+            </svg>
+            Async / DB
+        </div>
+        <div class="li">
+            <svg width="30" height="10">
+                <line x1="0" y1="5" x2="22" y2="5" stroke="#1e7e68" stroke-width="1.5" />
+                <polygon points="20,2 28,5 20,8" fill="#1e7e68" />
+            </svg>
+            Response path
+        </div>
+        <div style="width:1px;height:14px;background:#b0c8e8"></div>
+        <div class="li">
+            <div class="lb" style="background:#f0f0f0;border:1px solid #ccc"></div>Example Flow
+        </div>
+    </div>
+
+    <div class="canvas">
+
+        <!-- ═══════════════════════════ SVG ARROWS ═══════════════════════════ -->
+        <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible">
+            <defs>
+                <marker id="a" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="7" orient="auto">
+                    <polygon points="0,0 10,3.5 0,7" fill="#0d2040" />
+                </marker>
+                <marker id="ad" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="7" orient="auto">
+                    <polygon points="0,0 10,3.5 0,7" fill="#4080c0" />
+                </marker>
+                <marker id="adb" viewBox="0 0 10 7" refX="1" refY="3.5" markerWidth="7" markerHeight="7"
+                    orient="auto-start-reverse">
+                    <polygon points="0,0 10,3.5 0,7" fill="#4080c0" />
+                </marker>
+                <marker id="ag" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="7" orient="auto">
+                    <polygon points="0,0 10,3.5 0,7" fill="#1e7e68" />
+                </marker>
+            </defs>
+
+            <!-- 1. User → Chat UI -->
+            <line x1="218" y1="270" x2="320" y2="270" stroke="#0d2040" stroke-width="1.5" marker-end="url(#a)" />
+
+            <!-- 2. Chat UI → API Gateway -->
+            <path d="M456,270 L480,270 L480,230 L500,230" stroke="#0d2040" stroke-width="1.5" fill="none"
+                marker-end="url(#a)" />
+
+            <!-- 3. API Gateway → RAG Pipeline -->
+            <path d="M604,300 L604,330 L570,330 L570,360" stroke="#0d2040" stroke-width="1.5" fill="none"
+                marker-end="url(#a)" />
+
+            <!-- 4. RAG Pipeline → Retriever -->
+            <line x1="820" y1="465" x2="850" y2="465" stroke="#0d2040" stroke-width="1.5" marker-end="url(#a)" />
+
+            <!-- 5. Retriever → LLM group -->
+            <line x1="1012" y1="465" x2="1040" y2="465" stroke="#0d2040" stroke-width="1.5" marker-end="url(#a)" />
+
+            <!-- 9. Retriever ↔ FAISS -->
+            <line x1="931" y1="570" x2="931" y2="610" stroke="#4080c0" stroke-width="1.5" stroke-dasharray="4,3"
+                marker-end="url(#ad)" marker-start="url(#adb)" />
+
+            <!-- 10. RAG ↔ Session Memory -->
+            <line x1="400" y1="570" x2="400" y2="610" stroke="#4080c0" stroke-width="1.5" stroke-dasharray="4,3"
+                marker-end="url(#ad)" marker-start="url(#adb)" />
+
+            <!-- 13. Customer DB → Prompt Builder -->
+            <path d="M610,610 L610,555 L675,555 L675,510" stroke="#4080c0" stroke-width="1.5" stroke-dasharray="4,3"
+                fill="none" marker-end="url(#ad)" />
+
+            <!-- 11. Response loop -->
+            <path d="M1130,570 L1130,700 L36,700 L36,284 L218,270" stroke="#1e7e68" stroke-width="2" fill="none"
+                marker-end="url(#ag)" />
+        </svg>
+
+        <!-- ═══ ARROW LABELS ═══ -->
+        <div class="al" style="left:235px; top:240px;">query</div>
+        <div class="al" style="left:455px; top:240px;">/chat</div>
+        <div class="al" style="left:615px; top:315px;">dispatch</div>
+        <div class="al" style="left:805px; top:335px;">AI search</div>
+        <div class="al" style="left:1005px; top:335px;">LLM prompt</div>
+        <div class="al" style="left:945px; top:580px;">vector lookup</div>
+
+        <!-- ═══ EXAMPLE QUERY FLOW ANNOTATIONS ═══ -->
+        <div class="eq" style="left:320px; top:150px;">1. "How to reset PIN?"</div>
+        <div class="eq" style="left:500px; top:95px; background:#fff7e6; border-color:#ffd591; z-index:30;">2. Combined
+            Profile + Knowledge</div>
+        <div class="eq" style="left:850px; top:290px;">3. Found ATM Docs</div>
+        <div class="eq" style="left:120px; top:675px;">4. Final Response Answer</div>
+
+        <!-- ═══ USER & PROFILE ═══ -->
+        <div class="user-area" style="left:140px;top:210px;width:70px;">
+            <svg width="48" height="55" viewBox="0 0 52 60" display="block" style="margin:0 auto">
+                <circle cx="26" cy="16" r="13" fill="#ddeeff" stroke="#1a4580" stroke-width="2" />
+                <path d="M4,58 C4,40 48,40 48,58" fill="#ddeeff" stroke="#1a4580" stroke-width="2" />
+            </svg>
+            <span>Customer</span>
+        </div>
+
+        <div class="box blue" style="position:absolute;left:10px;top:210px;width:130px;height:75px;">
+            <div class="box-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0d3a70" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                </svg>
+                Current Profile
+            </div>
+            <div class="tags">
+                <div class="tp">Premier User</div>
+                <div class="tp">Loan: 2.1M</div>
+            </div>
+        </div>
+
+        <!-- ═══ CHAT UI ═══ -->
+        <div class="box teal" style="position:absolute;left:320px;top:240px;width:136px;height:60px;">
+            <div class="box-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#104e3e" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                React Chat UI
+            </div>
+            <div class="tags">
+                <div class="tp">User Chat</div>
+                <div class="tp">Source Links</div>
+            </div>
+        </div>
+
+        <!-- ═══ API GATEWAY GROUP ═══ -->
+        <div class="group go" style="left:500px;top:160px;width:208px;height:140px;">
+            <div class="group-label">API Gateway</div>
+            <div class="group-inner">
+                <div class="box orange">
+                    <div class="box-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#804800" stroke-width="2">
+                            <polyline points="16 18 22 12 16 6" />
+                            <polyline points="8 6 2 12 8 18" />
+                        </svg>
+                        FastAPI
+                    </div>
+                    <div class="tags">
+                        <div class="tp">Web Interface</div>
+                        <div class="tp">API Portal</div>
+                    </div>
+                </div>
+                <div class="box orange">
+                    <div class="box-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#804800" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        Session Mgr
+                    </div>
+                    <div class="tags">
+                        <div class="tp">Remembers 4-Turns</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ RAG PIPELINE GROUP ═══ -->
+        <div class="group gt" style="left:320px;top:360px;width:500px;height:210px;">
+            <div class="group-label">RAG Pipeline</div>
+            <div class="group-inner">
+                <div class="box teal">
+                    <div class="box-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b83030" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <circle cx="12" cy="15" r="0.9" fill="#b83030" />
+                        </svg>
+                        Security Guard
+                    </div>
+                    <div class="tags">
+                        <div class="tp">Block Risks</div>
+                        <div class="tp">Verify Topic</div>
+                    </div>
+                </div>
+                <div class="box teal">
+                    <div class="box-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#104e3e" stroke-width="2">
+                            <polyline points="17 1 21 5 17 9" />
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                            <polyline points="7 23 3 19 7 15" />
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                        </svg>
+                        History Manager
+                    </div>
+                    <div class="tags">
+                        <div class="tp">Last 4 Turns</div>
+                    </div>
+                </div>
+                <div class="box teal">
+                    <div class="box-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#104e3e" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                        </svg>
+                        Prompt Builder
+                    </div>
+                    <div class="tags">
+                        <div class="tp">Merge All Data</div>
+                        <div class="tp">AI Instructions</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ AI FINDER ═══ -->
+        <div class="box teal" style="position:absolute;left:850px;top:360px;width:162px;height:210px;">
+            <div class="box-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#104e3e" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                Semantic Retriever
+            </div>
+            <div class="tags">
+                <div class="tp">AI Finder</div>
+                <div class="tp">5 Best Matches</div>
+                <div class="tp">Relevance Filter</div>
+            </div>
+        </div>
+
+        <!-- ═══ LLM + DATA GROUP ═══ -->
+        <div class="group gt" style="left:1040px;top:360px;width:180px;height:210px;">
+            <div class="group-label">LLM &amp; Data Layer</div>
+            <div style="display:flex;flex-direction:column;gap:7px;flex:1;">
+                <div class="box teal" style="flex:1;">
+                    <div class="box-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#104e3e" stroke-width="2">
+                            <path
+                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                        </svg>
+                        Main AI (LLM)
+                    </div>
+                    <div class="tags">
+                        <div class="tp">Qwen 2.5 Brain</div>
+                        <div class="tp">Fact Checker</div>
+                    </div>
+                </div>
+                <div class="box red" style="flex:1;">
+                    <div class="box-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b83030" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            <polyline points="9 12 11 14 15 10" />
+                        </svg>
+                        Privacy Guard
+                    </div>
+                </div>
+                <div class="box blue" style="flex:1;">
+                    <div class="box-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0d3a70" stroke-width="2">
+                            <path d="M4 4h6l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+                        </svg>
+                        Bank Files
+                    </div>
+                </div>
+                <div class="box blue" style="flex:1;">
+                    <div class="box-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0d3a70" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                        Citations
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ═══ BOTTOM: SESSION MEMORY ═══ -->
+        <div class="box blue"
+            style="position:absolute;left:320px;top:610px;width:160px;height:50px;border-style:dashed;">
+            <div class="box-title">Session Memory</div>
+            <div class="tags">
+                <div class="tp">User History</div>
+            </div>
+        </div>
+
+        <!-- ═══ BOTTOM: CUSTOMER DATABASE ═══ -->
+        <div class="box blue"
+            style="position:absolute;left:520px;top:610px;width:180px;height:50px;border-style:dashed;">
+            <div class="box-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0d3a70" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                Customer Database
+            </div>
+            <div class="tags">
+                <div class="tp">Account Details</div>
+            </div>
+        </div>
+
+        <!-- ═══ BOTTOM: FAISS INDEX ═══ -->
+        <div class="box blue" style="position:absolute;left:850px;top:610px;width:162px;height:50px;">
+            <div class="box-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0d3a70" stroke-width="2">
+                    <ellipse cx="12" cy="5" rx="9" ry="3" />
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                </svg>
+                FAISS Vector Index
+            </div>
+            <div class="tags">
+                <div class="tp">L2 Search</div>
+                <div class="tp">Vectors</div>
+            </div>
+        </div>
+
+
+    </div><!-- /canvas -->
+
+</body>
+
+</html>
